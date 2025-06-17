@@ -5,8 +5,6 @@ Sheet4
 Sheet5
 Sheet6
 Sheet7
-StartEndDateOfRoster
-Sort
 AssignEmployee
 AssignEmployeeCopy
 InsertStaffCounter
@@ -16,3 +14,5 @@ Sheet2
 Sheet1
 ResetDutiesAOHCounter
 vbeGit
+ClearTableContent
+Sheet3

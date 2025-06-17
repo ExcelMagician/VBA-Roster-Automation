@@ -11,21 +11,17 @@ Public Sub ResetAOHCounter()
     isAllOne = True
 
     For i = 12 To lastRow
-        If Trim(ws.Cells(i, 2).Value) <> "" Then
-            If ws.Cells(i, 6).Value <> 1 Then
-                isAllOne = False
-                
-                Exit For
-            End If
+        If ws.Cells(i, 6).Value <> 1 Then
+            isAllOne = False
+            
+            Exit For
         End If
     Next i
 
     ' Reset if all have AOH = 1
     If isAllOne Then
         For i = 12 To lastRow
-            If Trim(ws.Cells(i, 2).Value) <> "" Then
-                ws.Cells(i, 6).Value = 0
-            End If
+            ws.Cells(i, 6).Value = 0
         Next i
     End If
 End Sub

@@ -43,7 +43,7 @@ Public Sub PrintAllCode()
             Dim lineCount As Long
             lineCount = item.codeModule.CountOfLines
             If lineCount > 0 Then
-                lineToPrint = item.codeModule.Lines(1, lineCount)
+                lineToPrint = item.codeModule.lines(1, lineCount)
                 Debug.Print lineToPrint
                 textToPrint = textToPrint & vbCrLf & lineToPrint
             Else

@@ -1,6 +1,7 @@
 Attribute VB_Name = "InsertStaffCounter"
-Sub InsertStaffCounter()
+Public Sub InsertStaffCounter()
     Dim ws As Worksheet
+    Dim newRow As Long
     Dim lastRow As Long
     Dim staffName As String, dept As String
     Dim maxDuties As Variant
@@ -11,6 +12,7 @@ Sub InsertStaffCounter()
     matchRow = 0
 
     Set ws = ThisWorkbook.Sheets("PersonnelList (AOH & Desk)")
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
 
     ' Read correct cell values
     staffName = UCase(Trim(ws.Range("C3").Value)) ' Name
@@ -24,7 +26,7 @@ Sub InsertStaffCounter()
     End If
     
     ' Check for duplicate names
-    For checkRow = 10 To 1000
+    For checkRow = 10 To lastRow
         If ws.Cells(checkRow, 2).Value = staffName Then
             MsgBox "This staff name already exists. ", vbExclamation
             Exit Sub
@@ -44,23 +46,17 @@ Sub InsertStaffCounter()
 
     
     ' Find next empty row based on column B (Name)
-    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row + 1
-
-    ' Insert data into row
-    ws.Cells(lastRow, 2).Value = staffName    ' Name
-    ws.Cells(lastRow, 3).Value = dept               ' Dept
-    ws.Cells(lastRow, 4).Value = maxDuties      ' Max Duties
+    newRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row + 1
     
     ' Set Duties Counter
     If Trim(ws.Range("C6").Value) = "" Then
-        ws.Cells(lastRow, 5).Value = 0
+        ws.Cells(newRow, 5).Value = 0
     Else
-        ws.Cells(lastRow, 5).Value = ws.Range("C6").Value
+        ws.Cells(newRow, 5).Value = ws.Range("C6").Value
     End If
     
-    ' Search column B (Name) from row 10 to 1000
-    For i = 10 To 1000
-        If ws.Cells(i, 2).Value = staffName Then
+    For i = 10 To lastRow
+        If UCase(Trim(ws.Cells(i, 2).Value)) = UCase(Trim(staffName)) Then
             matchRow = i
         Exit For
         End If
@@ -70,10 +66,10 @@ Sub InsertStaffCounter()
     If Trim(ws.Range("C7").Value) = "" Then
         ws.Cells(matchRow, 6).Value = 0
     Else
-    If Trim(ws.Range("C7").Value) > 1 Then
-        MsgBox "AOH Counter must not be more than 1.", vbExclamation
-        Exit Sub
-    End If
+        If Trim(ws.Range("C7").Value) > 1 Then
+            MsgBox "AOH Counter must not be more than 1.", vbExclamation
+            Exit Sub
+        End If
         ws.Cells(matchRow, 6).Value = ws.Range("C7").Value
     End If
 

@@ -97,8 +97,8 @@ Sub AssignMorningDuties()
             If currDuties >= maxDuties Then GoTo SkipStaff
             
             ' Assign from top
-            If wsRoster.Cells(r, MOR_COL).Value = "" Then
-                wsRoster.Cells(r, MOR_COL).Value = staffName
+            If wsRosterCopy.Cells(r, MOR_COL).Value = "" Then
+                wsRosterCopy.Cells(r, MOR_COL).Value = staffName
                 Call IncrementDutiesCounter(staffName)
                 Exit For
             End If
@@ -116,7 +116,7 @@ Sub ShuffleArray(arr() As Long)
     Randomize
     For i = UBound(arr) To LBound(arr) + 1 Step -1
         j = Int(Rnd() * (i - LBound(arr) + 1)) + LBound(arr)
-        tmp = Array(i)
+        tmp = arr(i)
         arr(i) = arr(j)
         arr(j) = tmp
     Next i

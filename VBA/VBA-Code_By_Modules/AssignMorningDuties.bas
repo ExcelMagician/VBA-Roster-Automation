@@ -15,6 +15,7 @@ Attribute VB_Name = "AssignMorningDuties"
     Private Const AFT_COL As Long = 8
     Private Const AOH_COL As Long = 10
     Private Const SAT_AOH_COL1 As Long = 12
+    Private Const SAT_AOH_COL2 As Long = 14
     Private Const START_ROW As Long = 6
 
 Sub AssignMorningDuties()
@@ -40,7 +41,7 @@ Sub AssignMorningDuties()
     Set dictMax = CreateObject("Scripting.Dictionary")
     
     ' Clear morning column assignments
-    wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, MOR_COL), wsRosterCopy.Cells(186, MOR_COL)).Interior.ColorIndex = xlNone
+    'wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, MOR_COL), wsRosterCopy.Cells(186, MOR_COL)).Interior.ColorIndex = xlNone
     
     ' Step 1: Assign Specific Days Staff
     For i = 1 To spectbl.ListRows.Count
@@ -84,7 +85,9 @@ Sub AssignMorningDuties()
     Next i
     
     ' Step 2: Assign All Days Staff
-    For r = START_ROW To totalDays
+    For r = START_ROW To 186
+        If wsRosterCopy.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
+        If wsRosterCopy.Cells(r, MOR_COL).Value = "CLOSED" Then GoTo SkipDay
         For i = 1 To morningtbl.ListRows.Count
             staffName = morningtbl.DataBodyRange(i, morningtbl.ListColumns("Name").Index).Value
             If UCase(morningtbl.DataBodyRange(i, morningtbl.ListColumns("Availability Type").Index).Value) = "SPECIFIC DAYS" Then
@@ -105,7 +108,9 @@ Sub AssignMorningDuties()
         
 SkipStaff:
         Next i
-    Next r
+        
+SkipDay:
+        Next r
     
     MsgBox "Duties assignment completed!", vbInformation
 End Sub
@@ -134,7 +139,7 @@ Function GetEligibleRows(totalDays As Long, workDays As Variant) As Collection
     Next j
     
     
-    For r = START_ROW To totalDays
+    For r = START_ROW To 186
         dayName = Trim(wsRosterCopy.Cells(r, DAY_COL).Value)
         ' Debug: show what day we are checking
         Debug.Print "Row " & r & ": " & dayName

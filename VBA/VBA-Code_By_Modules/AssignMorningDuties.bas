@@ -21,7 +21,7 @@ Attribute VB_Name = "AssignMorningDuties"
 Sub AssignMorningDuties()
     Set wsRosterCopy = Sheets("MasterCopy (2)")
     Set wsSettings = Sheets("Settings")
-    Set wsPersonnel = Sheets("PersonnelList Copy")
+    Set wsPersonnel = Sheets("Morning PersonnelList")
     Set morningtbl = wsPersonnel.ListObjects("MorningMainList")
     Set spectbl = wsPersonnel.ListObjects("MorningSpecificDaysWorkingStaff")
     
@@ -33,15 +33,8 @@ Sub AssignMorningDuties()
     Dim candidates() As String
     Dim staffName As String
     Dim workDays As Variant
-    Dim dictAssigned As Object, dictMax As Object
 
     totalDays = wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, DATE_COL), wsRosterCopy.Cells(186, DATE_COL)).Rows.Count
-        
-    Set dictAssigned = CreateObject("Scripting.Dictionary")
-    Set dictMax = CreateObject("Scripting.Dictionary")
-    
-    ' Clear morning column assignments
-    'wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, MOR_COL), wsRosterCopy.Cells(186, MOR_COL)).Interior.ColorIndex = xlNone
     
     ' Step 1: Assign Specific Days Staff
     For i = 1 To spectbl.ListRows.Count
@@ -77,7 +70,6 @@ Sub AssignMorningDuties()
         ' Assign staff
         For j = 1 To Application.Min(maxDuties, eligibleRows.Count)
             wsRosterCopy.Cells(tmpRows(j), MOR_COL).Value = staffName
-            dictAssigned(staffName) = dictAssigned(staffName) + 1
             
             ' increment the Duties Counter
             Call IncrementDutiesCounter(staffName)

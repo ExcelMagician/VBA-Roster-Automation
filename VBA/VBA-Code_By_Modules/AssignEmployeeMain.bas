@@ -64,5 +64,6 @@ Sub Main()
 NextDate:
     Next dateRow
     
+    Call AssignMorningDuties.AssignMorningDuties
 End Sub
 

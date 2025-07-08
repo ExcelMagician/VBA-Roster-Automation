@@ -1,4 +1,7 @@
 Attribute VB_Name = "AssignEmployeeMain"
+'global variable
+    Public LAST_ROW_ROSTER As Long
+    
 'declare worksheet and table
     Private wsRosterCopy As Worksheet
     Private wsPersonnel As Worksheet
@@ -25,15 +28,15 @@ Sub Main()
     Dim currDate As Date
     
     If wsRosterCopy.Cells(2, 10).Value = "Jan-Jun" And wsRosterCopy.Cells(2, 13).Value Mod 4 = 0 Then
-        lastRowRoster = 187
+        LAST_ROW_ROSTER = 187
     ElseIf wsRosterCopy.Cells(2, 10).Value = "Jan-Jun" Then
-        lastRowRoster = 186
+        LAST_ROW_ROSTER = 186
     Else
-        lastRowRoster = 189
+        LAST_ROW_ROSTER = 189
     End If
        
      'Loop through each date row
-     For dateRow = 6 To lastRowRoster
+    For dateRow = 6 To LAST_ROW_ROSTER
      
         currDate = wsRosterCopy.Cells(dateRow, DATE_COL).Value
         

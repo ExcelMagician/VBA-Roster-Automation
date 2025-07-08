@@ -34,7 +34,7 @@ Sub AssignAfternoonDuties()
     Dim staffName As String
     Dim workDays As Variant
 
-    totalDays = wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, DATE_COL), wsRosterCopy.Cells(186, DATE_COL)).Rows.Count
+    totalDays = wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, DATE_COL), wsRosterCopy.Cells(LAST_ROW_ROSTER, DATE_COL)).Rows.Count
     
     ' Step 1: Assign Specific Days Staff
     For i = 1 To spectbl.ListRows.Count
@@ -77,7 +77,7 @@ Sub AssignAfternoonDuties()
     Next i
     
     ' Step 2: Assign All Days Staff
-    For r = START_ROW To 186
+    For r = START_ROW To LAST_ROW_ROSTER
         If wsRosterCopy.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
         If wsRosterCopy.Cells(r, AFT_COL).Value = "CLOSED" Then GoTo SkipDay
         For i = 1 To afternoontbl.ListRows.Count
@@ -131,7 +131,7 @@ Function GetEligibleRows(totalDays As Long, workDays As Variant) As Collection
     Next j
     
     
-    For r = START_ROW To 186
+    For r = START_ROW To LAST_ROW_ROSTER
         dayName = Trim(wsRosterCopy.Cells(r, DAY_COL).Value)
         ' Debug: show what day we are checking
         Debug.Print "Row " & r & ": " & dayName

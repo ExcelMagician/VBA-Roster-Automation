@@ -33,7 +33,7 @@ Sub AssignAOHDuties()
     Dim staffName As String
     Dim workDays As Variant
 
-    totalDays = wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, DATE_COL), wsRosterCopy.Cells(186, DATE_COL)).Rows.Count
+    totalDays = wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, DATE_COL), wsRosterCopy.Cells(LAST_ROW_ROSTER, DATE_COL)).Rows.Count
     
     ' Step 1: Assign Specific Days Staff with weekly limit
     For i = 1 To spectbl.ListRows.Count
@@ -78,20 +78,20 @@ Sub AssignAOHDuties()
             weekStart = r - (Weekday(wsRosterCopy.Cells(r, DATE_COL).Value, vbMonday) - 1)
             If weekStart < START_ROW Then weekStart = START_ROW
             weekEnd = weekStart + 6
-            If weekEnd >= 186 Then weekEnd = 186 - 1
+            If weekEnd >= LAST_ROW_ROSTER Then weekEnd = LAST_ROW_ROSTER - 1
             Debug.Print "  Week boundaries: Start = " & weekStart & ", End = " & weekEnd
             
             Dim dutyCount As Long
             dutyCount = 0
             For k = weekStart To weekEnd
-                If k >= START_ROW And k < 186 And wsRosterCopy.Cells(k, AOH_COL).Value = staffName And _
+                If k >= START_ROW And k < LAST_ROW_ROSTER And wsRosterCopy.Cells(k, AOH_COL).Value = staffName And _
                    UCase(Trim(wsRosterCopy.Cells(k, VAC_COL).Value)) = "SEM TIME" Then
                     dutyCount = dutyCount + 1
                 End If
             Next k
             Debug.Print "  Current duty count in week: " & dutyCount
             
-            If wsRosterCopy.Cells(r, AOH_COL).Value = "" And CheckWeeklyLimit(staffName, r, START_ROW, 186) Then
+            If wsRosterCopy.Cells(r, AOH_COL).Value = "" And CheckWeeklyLimit(staffName, r, START_ROW, LAST_ROW_ROSTER) Then
                 wsRosterCopy.Cells(r, AOH_COL).Value = staffName
                 Call IncrementDutiesCounter(staffName)
                 assigned = assigned + 1
@@ -104,7 +104,7 @@ Sub AssignAOHDuties()
     Next i
     
     ' Step 2: Assign All Days Staff with weekly limit
-    For r = START_ROW To 186
+    For r = START_ROW To LAST_ROW_ROSTER
         If wsRosterCopy.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
         If wsRosterCopy.Cells(r, AOH_COL).Value = "CLOSED" Then GoTo SkipDay
         ' Check if the day is sem time (not vacation)
@@ -123,10 +123,10 @@ Sub AssignAOHDuties()
             If currDuties >= maxDuties Then GoTo SkipStaff
             
             ' Assign from top with weekly limit check
-            If wsRosterCopy.Cells(r, AOH_COL).Value = "" And CheckWeeklyLimit(staffName, r, START_ROW, 186) Then
+            If wsRosterCopy.Cells(r, AOH_COL).Value = "" And CheckWeeklyLimit(staffName, r, START_ROW, LAST_ROW_ROSTER) Then
                 wsRosterCopy.Cells(r, AOH_COL).Value = staffName
                 Call IncrementDutiesCounter(staffName)
-                ' Debug.Print "Assigned All Days staff " & staffName & " to row " & r
+                Debug.Print "Assigned All Days staff " & staffName & " to row " & r
                 Exit For
             End If
         
@@ -162,7 +162,7 @@ Function GetEligibleRows(totalDays As Long, workDays As Variant) As Collection
         Debug.Print "[" & j & "]: " & workDays(j)
     Next j
     
-    For r = START_ROW To 186
+    For r = START_ROW To LAST_ROW_ROSTER
         dayName = Trim(wsRosterCopy.Cells(r, DAY_COL).Value)
         Debug.Print "Row " & r & ": " & dayName
         
@@ -214,8 +214,6 @@ Sub IncrementDutiesCounter(staffName As String)
     End If
 End Sub
 
-
-
 Function CheckWeeklyLimit(staffName As String, rowNum As Long, startRow As Long, endRow As Long) As Boolean
     Dim ws As Worksheet
     Dim i As Long
@@ -229,7 +227,7 @@ Function CheckWeeklyLimit(staffName As String, rowNum As Long, startRow As Long,
     weekEnd = weekStart + 6
     If weekEnd >= endRow Then weekEnd = endRow - 1
     
-    ' Debug.Print "Row " & rowNum & ": Week Start = " & weekStart & ", Week End = " & weekEnd
+    Debug.Print "Row " & rowNum & ": Week Start = " & weekStart & ", Week End = " & weekEnd
     dutyCount = 0
     For i = weekStart To weekEnd
         If i >= startRow And i < endRow And ws.Cells(i, AOH_COL).Value = staffName And UCase(Trim(ws.Cells(i, VAC_COL).Value)) = "SEM TIME" Then

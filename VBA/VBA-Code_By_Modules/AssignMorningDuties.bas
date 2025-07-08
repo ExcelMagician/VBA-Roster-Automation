@@ -68,11 +68,17 @@ Sub AssignMorningDuties()
         Call ShuffleArray(tmpRows)
         
         ' Assign staff
-        For j = 1 To Application.Min(maxDuties, eligibleRows.Count)
-            wsRosterCopy.Cells(tmpRows(j), MOR_COL).Value = staffName
-            
-            ' increment the Duties Counter
-            Call IncrementDutiesCounter(staffName)
+        Dim assignedCount As Long
+        assignedCount = 0
+        
+        For j = 1 To eligibleRows.Count
+            If assignedCount >= maxDuties Then Exit For
+        
+            If Not IsWorkingOnSameDay(tmpRows(j), staffName) Then
+                wsRosterCopy.Cells(tmpRows(j), MOR_COL).Value = staffName
+                Call IncrementDutiesCounter(staffName)
+                assignedCount = assignedCount + 1
+            End If
         Next j
     Next i
     
@@ -90,6 +96,7 @@ Sub AssignMorningDuties()
             currDuties = morningtbl.DataBodyRange(i, morningtbl.ListColumns("Duties Counter").Index).Value
             'check if the staff already reach his max duties
             If currDuties >= maxDuties Then GoTo SkipStaff
+            If IsWorkingOnSameDay(r, staffName) Then GoTo SkipStaff
             
             ' Assign from top
             If wsRosterCopy.Cells(r, MOR_COL).Value = "" Then
@@ -167,7 +174,7 @@ Sub IncrementDutiesCounter(staffName As String)
 
     If Not foundCell Is Nothing Then
         ' Get relative row index in the table
-        rowIdx = foundCell.Row - morningtbl.HeaderRowRange.Row
+        rowIdx = foundCell.row - morningtbl.HeaderRowRange.row
 
         ' Increment Duties Counter
         With morningtbl.ListRows(rowIdx).Range.Cells(morningtbl.ListColumns("Duties Counter").Index)
@@ -177,5 +184,20 @@ Sub IncrementDutiesCounter(staffName As String)
         MsgBox "Staff '" & staffName & "' not found in table.", vbExclamation
     End If
 End Sub
+
+Function IsWorkingOnSameDay(row As Long, staffName As String) As Boolean
+    If wsRosterCopy.Cells(row, AFT_COL).Value = staffName Then
+        IsWorkingOnSameDay = True
+        Exit Function
+    End If
+    
+    If wsRosterCopy.Cells(row, AOH_COL).Value = staffName Then
+        IsWorkingOnSameDay = True
+        Exit Function
+    End If
+        
+    IsWorkingOnSameDay = False
+    
+End Function
 
 

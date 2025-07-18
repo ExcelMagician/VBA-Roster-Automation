@@ -1,25 +1,13 @@
 Attribute VB_Name = "AssignMorningDuties"
-'declare worksheet and table
-    Private wsRosterCopy As Worksheet
-    Private wsPersonnel As Worksheet
-    Private wsSettings As Worksheet
-    Private morningtbl As ListObject
-    Private spectbl As ListObject
-    
-'declare roster column number
-    Private Const VAC_COL As Long = 1
-    Private Const DATE_COL As Long = 2
-    Private Const DAY_COL As Long = 3
-    Private Const LMB_COL As Long = 4
-    Private Const MOR_COL As Long = 6
-    Private Const AFT_COL As Long = 8
-    Private Const AOH_COL As Long = 10
-    Private Const SAT_AOH_COL1 As Long = 12
-    Private Const SAT_AOH_COL2 As Long = 14
-    Private Const START_ROW As Long = 6
+' Declare worksheet and table
+Private wsRoster As Worksheet
+Private wsPersonnel As Worksheet
+Private wsSettings As Worksheet
+Private morningtbl As ListObject
+Private spectbl As ListObject
 
 Sub AssignMorningDuties()
-    Set wsRosterCopy = Sheets("MasterCopy (2)")
+    Set wsRoster = Sheets("MasterCopy (2)")
     Set wsSettings = Sheets("Settings")
     Set wsPersonnel = Sheets("Morning PersonnelList")
     Set morningtbl = wsPersonnel.ListObjects("MorningMainList")
@@ -34,7 +22,8 @@ Sub AssignMorningDuties()
     Dim staffName As String
     Dim workDays As Variant
 
-    totalDays = wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, DATE_COL), wsRosterCopy.Cells(LAST_ROW_ROSTER, DATE_COL)).Rows.Count
+    totalDays = wsRoster.Range(wsRoster.Cells(START_ROW, DATE_COL), wsRoster.Cells(LAST_ROW_ROSTER, DATE_COL)).Rows.Count
+    Debug.Print "morning assignment starts here"
     
     ' Step 1: Assign Specific Days Staff
     For i = 1 To spectbl.ListRows.Count
@@ -75,7 +64,7 @@ Sub AssignMorningDuties()
             If assignedCount >= maxDuties Then Exit For
         
             If Not IsWorkingOnSameDay(tmpRows(j), staffName) Then
-                wsRosterCopy.Cells(tmpRows(j), MOR_COL).Value = staffName
+                wsRoster.Cells(tmpRows(j), MOR_COL).Value = staffName
                 Call IncrementDutiesCounter(staffName)
                 assignedCount = assignedCount + 1
             End If
@@ -84,8 +73,8 @@ Sub AssignMorningDuties()
     
     ' Step 2: Assign All Days Staff
     For r = START_ROW To LAST_ROW_ROSTER
-        If wsRosterCopy.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
-        If wsRosterCopy.Cells(r, MOR_COL).Value = "CLOSED" Then GoTo SkipDay
+        If wsRoster.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
+        If wsRoster.Cells(r, MOR_COL).Value = "CLOSED" Then GoTo SkipDay
         For i = 1 To morningtbl.ListRows.Count
             staffName = morningtbl.DataBodyRange(i, morningtbl.ListColumns("Name").Index).Value
             If UCase(morningtbl.DataBodyRange(i, morningtbl.ListColumns("Availability Type").Index).Value) = "SPECIFIC DAYS" Then

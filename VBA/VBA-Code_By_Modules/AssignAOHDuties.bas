@@ -1,31 +1,19 @@
 Attribute VB_Name = "AssignAOHDuties"
 ' Declare worksheet and table
-Private wsRosterCopy As Worksheet
+Private wsRoster As Worksheet
 Private wsPersonnel As Worksheet
 Private wsSettings As Worksheet
 Private aohtbl As ListObject
 Private spectbl As ListObject
 
-' Declare roster column numbers
-Private Const VAC_COL As Long = 1
-Private Const DATE_COL As Long = 2
-Private Const DAY_COL As Long = 3
-Private Const LMB_COL As Long = 4
-Private Const MOR_COL As Long = 6
-Private Const AFT_COL As Long = 8
-Private Const AOH_COL As Long = 10
-Private Const SAT_AOH_COL1 As Long = 12
-Private Const SAT_AOH_COL2 As Long = 14
-Private Const START_ROW As Long = 6
-
 Sub AssignAOHDuties()
-    Set wsRosterCopy = Sheets("MasterCopy (2)")
+    Set wsRoster = Sheets("MasterCopy (2)")
     Set wsSettings = Sheets("Settings")
     Set wsPersonnel = Sheets("AOH PersonnelList")
     Set aohtbl = wsPersonnel.ListObjects("AOHMainList")
     Set spectbl = wsPersonnel.ListObjects("AOHSpecificDaysWorkingStaff")
     
-    Dim i As Long, j As Long, r As Long
+    Dim i As Long, j As Long, r As Long, k As Long
     Dim dateCount As Long
     Dim totalDays As Long
     Dim dayName As String
@@ -33,7 +21,7 @@ Sub AssignAOHDuties()
     Dim staffName As String
     Dim workDays As Variant
 
-    totalDays = wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, DATE_COL), wsRosterCopy.Cells(LAST_ROW_ROSTER, DATE_COL)).Rows.Count
+    totalDays = wsRoster.Range(wsRoster.Cells(START_ROW, DATE_COL), wsRoster.Cells(LAST_ROW_ROSTER, DATE_COL)).Rows.Count
     
     ' Step 1: Assign Specific Days Staff with weekly limit
     For i = 1 To spectbl.ListRows.Count
@@ -46,7 +34,7 @@ Sub AssignAOHDuties()
             workDays(j) = Trim(workDays(j))
         Next j
         
-        ' Get max duties for this staff from MorningMainList
+        ' Get max duties for this staff from AOHMainList
         For r = 1 To aohtbl.ListRows.Count
             If aohtbl.DataBodyRange(r, aohtbl.ListColumns("Name").Index).Value = staffName Then
                 maxDuties = aohtbl.DataBodyRange(r, aohtbl.ListColumns("Max Duties").Index).Value
@@ -75,7 +63,7 @@ Sub AssignAOHDuties()
             Debug.Print "Considering row " & r & " for " & staffName & " (Shuffled index: " & j & ")"
             
             Dim weekStart As Long, weekEnd As Long
-            weekStart = r - (Weekday(wsRosterCopy.Cells(r, DATE_COL).Value, vbMonday) - 1)
+            weekStart = r - (Weekday(wsRoster.Cells(r, DATE_COL).Value, vbMonday) - 1)
             If weekStart < START_ROW Then weekStart = START_ROW
             weekEnd = weekStart + 6
             If weekEnd >= LAST_ROW_ROSTER Then weekEnd = LAST_ROW_ROSTER - 1
@@ -84,15 +72,15 @@ Sub AssignAOHDuties()
             Dim dutyCount As Long
             dutyCount = 0
             For k = weekStart To weekEnd
-                If k >= START_ROW And k < LAST_ROW_ROSTER And wsRosterCopy.Cells(k, AOH_COL).Value = staffName And _
-                   UCase(Trim(wsRosterCopy.Cells(k, VAC_COL).Value)) = "SEM TIME" Then
+                If k >= START_ROW And k < LAST_ROW_ROSTER And wsRoster.Cells(k, AOH_COL).Value = staffName And _
+                   UCase(Trim(wsRoster.Cells(k, VAC_COL).Value)) = "SEM TIME" Then
                     dutyCount = dutyCount + 1
                 End If
             Next k
             Debug.Print "  Current duty count in week: " & dutyCount
             
-            If wsRosterCopy.Cells(r, AOH_COL).Value = "" And CheckWeeklyLimit(staffName, r, START_ROW, LAST_ROW_ROSTER) Then
-                wsRosterCopy.Cells(r, AOH_COL).Value = staffName
+            If wsRoster.Cells(r, AOH_COL).Value = "" And CheckWeeklyLimit(staffName, r, START_ROW, LAST_ROW_ROSTER) Then
+                wsRoster.Cells(r, AOH_COL).Value = staffName
                 Call IncrementDutiesCounter(staffName)
                 assigned = assigned + 1
                 Debug.Print "  Assigned " & staffName & " to row " & r & " (Duty count: " & assigned & ")"
@@ -105,10 +93,10 @@ Sub AssignAOHDuties()
     
     ' Step 2: Assign All Days Staff with weekly limit
     For r = START_ROW To LAST_ROW_ROSTER
-        If wsRosterCopy.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
-        If wsRosterCopy.Cells(r, AOH_COL).Value = "CLOSED" Then GoTo SkipDay
+        If wsRoster.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
+        If wsRoster.Cells(r, AOH_COL).Value = "CLOSED" Then GoTo SkipDay
         ' Check if the day is sem time (not vacation)
-        If UCase(Trim(wsRosterCopy.Cells(r, VAC_COL).Value)) <> "SEM TIME" Then GoTo SkipDay
+        If UCase(Trim(wsRoster.Cells(r, VAC_COL).Value)) <> "SEM TIME" Then GoTo SkipDay
         
         For i = 1 To aohtbl.ListRows.Count
             staffName = aohtbl.DataBodyRange(i, aohtbl.ListColumns("Name").Index).Value

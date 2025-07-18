@@ -123,8 +123,8 @@ Sub AssignAOHDuties()
             If currDuties >= maxDuties Then GoTo SkipStaff
             
             ' Assign from top with weekly limit check
-            If wsRosterCopy.Cells(r, AOH_COL).Value = "" And CheckWeeklyLimit(staffName, r, START_ROW, LAST_ROW_ROSTER) Then
-                wsRosterCopy.Cells(r, AOH_COL).Value = staffName
+            If wsRoster.Cells(r, AOH_COL).Value = "" And CheckWeeklyLimit(staffName, r, START_ROW, LAST_ROW_ROSTER) Then
+                wsRoster.Cells(r, AOH_COL).Value = staffName
                 Call IncrementDutiesCounter(staffName)
                 Debug.Print "Assigned All Days staff " & staffName & " to row " & r
                 Exit For
@@ -135,6 +135,135 @@ SkipStaff:
         
 SkipDay:
         Next r
+    
+    ' Step 3: Reassign All Days Staff for last 2 weeks with random assignment
+    Dim needsReassignment As Boolean
+    Do
+        needsReassignment = False
+        Dim lastTwoWeeksStart As Long
+        lastTwoWeeksStart = LAST_ROW_ROSTER - 13 ' Last 14 days (2 weeks)
+        If lastTwoWeeksStart < START_ROW Then lastTwoWeeksStart = START_ROW
+        
+        ' Check if any All Days staff need reassignment
+        For i = 1 To aohtbl.ListRows.Count
+            staffName = aohtbl.DataBodyRange(i, aohtbl.ListColumns("Name").Index).Value
+            maxDuties = aohtbl.DataBodyRange(i, aohtbl.ListColumns("Max Duties").Index).Value
+            currDuties = aohtbl.DataBodyRange(i, aohtbl.ListColumns("Duties Counter").Index).Value
+            If UCase(aohtbl.DataBodyRange(i, aohtbl.ListColumns("Availability Type").Index).Value) <> "SPECIFIC DAYS" And currDuties < maxDuties Then
+                needsReassignment = True
+                Debug.Print "Staff " & staffName & " needs reassignment (Current: " & currDuties & ", Max: " & maxDuties & ")"
+            End If
+        Next i
+        
+        If needsReassignment Then
+            ' Remove existing assignments for All Days staff in last 2 weeks and collect staff needing reassignment
+            Dim removedStaff() As String
+            ReDim removedStaff(0)
+            For r = lastTwoWeeksStart To LAST_ROW_ROSTER
+                If wsRoster.Cells(r, AOH_COL).Value <> "" And wsRoster.Cells(r, AOH_COL).Value <> "CLOSED" Then
+                    staffName = wsRoster.Cells(r, AOH_COL).Value
+                    For i = 1 To aohtbl.ListRows.Count
+                        If aohtbl.DataBodyRange(i, aohtbl.ListColumns("Name").Index).Value = staffName And _
+                           UCase(aohtbl.DataBodyRange(i, aohtbl.ListColumns("Availability Type").Index).Value) <> "SPECIFIC DAYS" Then
+                            wsRoster.Cells(r, AOH_COL).Value = ""
+                            Call DecrementDutiesCounter(staffName)
+                            Debug.Print "Removed " & staffName & " from row " & r & " (Last 2 weeks)"
+                            ' Add to removedStaff array if not already present
+                            Dim found As Boolean
+                            found = False
+                            For j = LBound(removedStaff) To UBound(removedStaff)
+                                If removedStaff(j) = staffName Then found = True
+                            Next j
+                            If Not found Then
+                                ReDim Preserve removedStaff(UBound(removedStaff) + 1)
+                                removedStaff(UBound(removedStaff)) = staffName
+                            End If
+                            Exit For
+                        End If
+                    Next i
+                End If
+            Next r
+            
+            ' Build staff pool with only All Days staff needing reassignment (currDuties < maxDuties)
+            Dim staffPool() As String
+            ReDim staffPool(0)
+            For i = 1 To aohtbl.ListRows.Count
+                staffName = aohtbl.DataBodyRange(i, aohtbl.ListColumns("Name").Index).Value
+                If UCase(aohtbl.DataBodyRange(i, aohtbl.ListColumns("Availability Type").Index).Value) <> "SPECIFIC DAYS" Then
+                    maxDuties = aohtbl.DataBodyRange(i, aohtbl.ListColumns("Max Duties").Index).Value
+                    currDuties = aohtbl.DataBodyRange(i, aohtbl.ListColumns("Duties Counter").Index).Value
+                    If currDuties < maxDuties Then
+                        found = False
+                        For j = LBound(staffPool) To UBound(staffPool)
+                            If staffPool(j) = staffName Then found = True
+                        Next j
+                        If Not found Then
+                            ReDim Preserve staffPool(UBound(staffPool) + 1)
+                            staffPool(UBound(staffPool)) = staffName
+                        End If
+                    End If
+                End If
+            Next i
+            
+            ' Combine removed staff with staff pool (avoid duplicates)
+            For j = LBound(removedStaff) To UBound(removedStaff)
+                If removedStaff(j) <> "" Then
+                    found = False
+                    For k = LBound(staffPool) To UBound(staffPool)
+                        If staffPool(k) = removedStaff(j) Then found = True
+                    Next k
+                    If Not found Then
+                        ReDim Preserve staffPool(UBound(staffPool) + 1)
+                        staffPool(UBound(staffPool)) = removedStaff(j)
+                    End If
+                End If
+            Next j
+            
+            ' Shuffle staff pool
+            Dim tmpStaff() As String
+            If UBound(staffPool) > 0 Then
+                ReDim tmpStaff(1 To UBound(staffPool))
+                For j = 1 To UBound(staffPool)
+                    tmpStaff(j) = staffPool(j)
+                Next j
+                Call ShuffleArrayString(tmpStaff)
+            End If
+            
+            ' Reassign randomly from staff pool
+            Dim assignedInThisPass As Boolean
+            assignedInThisPass = False
+            For r = lastTwoWeeksStart To LAST_ROW_ROSTER
+                If wsRoster.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipReassignDay
+                If wsRoster.Cells(r, AOH_COL).Value <> "" Or wsRoster.Cells(r, AOH_COL).Value = "CLOSED" Then GoTo SkipReassignDay
+                If UCase(Trim(wsRoster.Cells(r, VAC_COL).Value)) <> "SEM TIME" Then GoTo SkipReassignDay
+                
+                For i = 1 To UBound(tmpStaff)
+                    staffName = tmpStaff(i)
+                    For j = 1 To aohtbl.ListRows.Count
+                        If aohtbl.DataBodyRange(j, aohtbl.ListColumns("Name").Index).Value = staffName And _
+                           UCase(aohtbl.DataBodyRange(j, aohtbl.ListColumns("Availability Type").Index).Value) <> "SPECIFIC DAYS" Then
+                            maxDuties = aohtbl.DataBodyRange(j, aohtbl.ListColumns("Max Duties").Index).Value
+                            currDuties = aohtbl.DataBodyRange(j, aohtbl.ListColumns("Duties Counter").Index).Value
+                            If currDuties < maxDuties And CheckWeeklyLimit(staffName, r, START_ROW, LAST_ROW_ROSTER) Then
+                                wsRoster.Cells(r, AOH_COL).Value = staffName
+                                Call IncrementDutiesCounter(staffName)
+                                Debug.Print "Reassigned All Days staff " & staffName & " to row " & r & " (Last 2 weeks)"
+                                assignedInThisPass = True
+                                Exit For
+                            Else
+                                Debug.Print "  Skipped " & staffName & " at row " & r & " (Limit reached or same-day conflict)"
+                            End If
+                        End If
+                    Next j
+                    If wsRoster.Cells(r, AOH_COL).Value <> "" Then Exit For
+                Next i
+SkipReassignDay:
+            Next r
+            
+            ' If no assignments were made in this pass, break the loop to avoid infinite cycling
+            If Not assignedInThisPass Then needsReassignment = False
+        End If
+    Loop Until Not needsReassignment
     
     MsgBox "Duties assignment completed!", vbInformation
 End Sub
@@ -150,31 +279,42 @@ Sub ShuffleArray(arr() As Long)
         arr(j) = tmp
     Next i
 End Sub
+' Helper to shuffle array of strings
+Sub ShuffleArrayString(arr() As String)
+    Dim i As Long, j As Long, tmp As String
+    Randomize
+    For i = UBound(arr) To LBound(arr) + 1 Step -1
+        j = Int(Rnd() * (i - LBound(arr) + 1)) + LBound(arr)
+        tmp = arr(i)
+        arr(i) = arr(j)
+        arr(j) = tmp
+    Next i
+End Sub
 
 Function GetEligibleRows(totalDays As Long, workDays As Variant) As Collection
     Dim eligibleRows As New Collection
     Dim r As Long, j As Long
     Dim dayName As String
 
-    Debug.Print "=== Checking Eligible Rows ==="
-    Debug.Print "WorkDays:"
+    'Debug.Print "=== Checking Eligible Rows ==="
+    'Debug.Print "WorkDays:"
     For j = LBound(workDays) To UBound(workDays)
-        Debug.Print "[" & j & "]: " & workDays(j)
+        'Debug.Print "[" & j & "]: " & workDays(j)
     Next j
     
     For r = START_ROW To LAST_ROW_ROSTER
-        dayName = Trim(wsRosterCopy.Cells(r, DAY_COL).Value)
-        Debug.Print "Row " & r & ": " & dayName
+        dayName = Trim(wsRoster.Cells(r, DAY_COL).Value)
+        'Debug.Print "Row " & r & ": " & dayName
         
         ' Skip if already filled
-        If Not IsEmpty(wsRosterCopy.Cells(r, AOH_COL)) Then
-            Debug.Print "  -> Skipped (Already Assigned)"
+        If Not IsEmpty(wsRoster.Cells(r, AOH_COL)) Then
+            'Debug.Print "  -> Skipped (Already Assigned)"
             GoTo SkipRow
         End If
         
         ' Check if the day is within sem time
-        If UCase(Trim(wsRosterCopy.Cells(r, VAC_COL).Value)) <> "SEM TIME" Then
-            Debug.Print "  -> Skipped (Not Sem Time)"
+        If UCase(Trim(wsRoster.Cells(r, VAC_COL).Value)) <> "SEM TIME" Then
+            'Debug.Print "  -> Skipped (Not Sem Time)"
             GoTo SkipRow
         End If
         
@@ -182,7 +322,7 @@ Function GetEligibleRows(totalDays As Long, workDays As Variant) As Collection
         For j = LBound(workDays) To UBound(workDays)
             If dayName = workDays(j) Then
                 eligibleRows.Add r
-                Debug.Print "  -> Added (Matched with " & workDays(j) & ")"
+                'Debug.Print "  -> Added (Matched with " & workDays(j) & ")"
                 Exit For
             End If
         Next j
@@ -203,11 +343,33 @@ Sub IncrementDutiesCounter(staffName As String)
 
     If Not foundCell Is Nothing Then
         ' Get relative row index in the table
-        rowIdx = foundCell.Row - aohtbl.HeaderRowRange.Row
+        rowIdx = foundCell.row - aohtbl.HeaderRowRange.row
 
         ' Increment Duties Counter
         With aohtbl.ListRows(rowIdx).Range.Cells(aohtbl.ListColumns("Duties Counter").Index)
             .Value = .Value + 1
+        End With
+    Else
+        MsgBox "Staff '" & staffName & "' not found in table.", vbExclamation
+    End If
+End Sub
+
+Sub DecrementDutiesCounter(staffName As String)
+    Dim rowIdx As Variant
+    Dim foundCell As Range
+
+    ' Search for the staff name
+    Set foundCell = aohtbl.ListColumns("Name").DataBodyRange.Find( _
+        What:=staffName, LookIn:=xlValues, LookAt:=xlWhole)
+
+    If Not foundCell Is Nothing Then
+        ' Get relative row index in the table
+        rowIdx = foundCell.row - aohtbl.HeaderRowRange.row
+
+        ' Decrement Duties Counter
+        With aohtbl.ListRows(rowIdx).Range.Cells(aohtbl.ListColumns("Duties Counter").Index)
+            .Value = .Value - 1
+            If .Value < 0 Then .Value = 0 ' Prevent negative values
         End With
     Else
         MsgBox "Staff '" & staffName & "' not found in table.", vbExclamation
@@ -221,16 +383,16 @@ Function CheckWeeklyLimit(staffName As String, rowNum As Long, startRow As Long,
     Dim weekEnd As Long
     Dim dutyCount As Long
     
-    Set ws = wsRosterCopy
+    Set ws = wsRoster
     weekStart = rowNum - (Weekday(ws.Cells(rowNum, DATE_COL).Value, vbMonday) - 1)
     If weekStart < startRow Then weekStart = startRow
     weekEnd = weekStart + 6
     If weekEnd >= endRow Then weekEnd = endRow - 1
     
-    Debug.Print "Row " & rowNum & ": Week Start = " & weekStart & ", Week End = " & weekEnd
+    Debug.Print "Row " & rowNum & ": Week Start = " & weekStart & ", End = " & weekEnd
     dutyCount = 0
     For i = weekStart To weekEnd
-        If i >= startRow And i < endRow And ws.Cells(i, AOH_COL).Value = staffName And UCase(Trim(ws.Cells(i, VAC_COL).Value)) = "SEM TIME" Then
+        If i >= startRow And i < endRow And (ws.Cells(i, AOH_COL).Value = staffName Or ws.Cells(i, SAT_AOH_COL1).Value = staffName Or ws.Cells(i, SAT_AOH_COL2).Value = staffName) And UCase(Trim(ws.Cells(i, VAC_COL).Value)) = "SEM TIME" Then
             dutyCount = dutyCount + 1
             If dutyCount >= 1 Then
                 CheckWeeklyLimit = False

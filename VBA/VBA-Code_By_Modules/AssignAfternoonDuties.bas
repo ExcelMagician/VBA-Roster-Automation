@@ -1,25 +1,13 @@
 Attribute VB_Name = "AssignAfternoonDuties"
-'declare worksheet and table
-    Private wsRosterCopy As Worksheet
-    Private wsPersonnel As Worksheet
-    Private wsSettings As Worksheet
-    Private afternoontbl As ListObject
-    Private spectbl As ListObject
-    
-'declare roster column number
-    Private Const VAC_COL As Long = 1
-    Private Const DATE_COL As Long = 2
-    Private Const DAY_COL As Long = 3
-    Private Const LMB_COL As Long = 4
-    Private Const MOR_COL As Long = 6
-    Private Const AFT_COL As Long = 8
-    Private Const AOH_COL As Long = 10
-    Private Const SAT_AOH_COL1 As Long = 12
-    Private Const SAT_AOH_COL2 As Long = 14
-    Private Const START_ROW As Long = 6
+' Declare worksheet and table
+Private wsRoster As Worksheet
+Private wsPersonnel As Worksheet
+Private wsSettings As Worksheet
+Private afternoontbl As ListObject
+Private spectbl As ListObject
 
 Sub AssignAfternoonDuties()
-    Set wsRosterCopy = Sheets("MasterCopy (2)")
+    Set wsRoster = Sheets("MasterCopy (2)")
     Set wsSettings = Sheets("Settings")
     Set wsPersonnel = Sheets("Afternoon PersonnelList")
     Set afternoontbl = wsPersonnel.ListObjects("AfternoonMainList")
@@ -34,12 +22,12 @@ Sub AssignAfternoonDuties()
     Dim staffName As String
     Dim workDays As Variant
 
-    totalDays = wsRosterCopy.Range(wsRosterCopy.Cells(START_ROW, DATE_COL), wsRosterCopy.Cells(LAST_ROW_ROSTER, DATE_COL)).Rows.Count
+    totalDays = wsRoster.Range(wsRoster.Cells(START_ROW, DATE_COL), wsRoster.Cells(LAST_ROW_ROSTER, DATE_COL)).Rows.Count
+    Debug.Print "afternoon assignment starts here"
     
     ' Step 1: Assign Specific Days Staff
     For i = 1 To spectbl.ListRows.Count
         staffName = spectbl.DataBodyRange(i, spectbl.ListColumns("Name").Index).Value
-        Debug.Print staffName
         workDays = Split(spectbl.DataBodyRange(i, spectbl.ListColumns("Working Days").Index).Value, ",")
         
         ' Clean up day names (remove spaces)
@@ -75,7 +63,7 @@ Sub AssignAfternoonDuties()
             If assignedCount >= maxDuties Then Exit For
         
             If Not IsWorkingOnSameDay(tmpRows(j), staffName) Then
-                wsRosterCopy.Cells(tmpRows(j), AFT_COL).Value = staffName
+                wsRoster.Cells(tmpRows(j), AFT_COL).Value = staffName
                 Call IncrementDutiesCounter(staffName)
                 assignedCount = assignedCount + 1
             End If
@@ -84,8 +72,8 @@ Sub AssignAfternoonDuties()
     
     ' Step 2: Assign All Days Staff
     For r = START_ROW To LAST_ROW_ROSTER
-        If wsRosterCopy.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
-        If wsRosterCopy.Cells(r, AFT_COL).Value = "CLOSED" Then GoTo SkipDay
+        If wsRoster.Cells(r, DAY_COL).Value = "Sat" Then GoTo SkipDay
+        If wsRoster.Cells(r, AFT_COL).Value = "CLOSED" Then GoTo SkipDay
         For i = 1 To afternoontbl.ListRows.Count
             staffName = afternoontbl.DataBodyRange(i, afternoontbl.ListColumns("Name").Index).Value
             If UCase(afternoontbl.DataBodyRange(i, afternoontbl.ListColumns("Availability Type").Index).Value) = "SPECIFIC DAYS" Then
@@ -93,14 +81,15 @@ Sub AssignAfternoonDuties()
             End If
             
             maxDuties = afternoontbl.DataBodyRange(i, afternoontbl.ListColumns("Max Duties").Index).Value
+            Dim currDuties As Long
             currDuties = afternoontbl.DataBodyRange(i, afternoontbl.ListColumns("Duties Counter").Index).Value
-            'check if the staff already reach his max duties
+            ' Check if the staff already reached his max duties
             If currDuties >= maxDuties Then GoTo SkipStaff
             If IsWorkingOnSameDay(r, staffName) Then GoTo SkipStaff
             
             ' Assign from top
-            If wsRosterCopy.Cells(r, AFT_COL).Value = "" Then
-                wsRosterCopy.Cells(r, AFT_COL).Value = staffName
+            If wsRoster.Cells(r, AFT_COL).Value = "" Then
+                wsRoster.Cells(r, AFT_COL).Value = staffName
                 Call IncrementDutiesCounter(staffName)
                 Exit For
             End If

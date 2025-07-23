@@ -3,7 +3,6 @@ Option Explicit
 
 ' Main subroutine to handle staff swapping
 Sub SwapStaff()
-    Dim wsRoster As Worksheet
     Dim wsPersonnel As Worksheet
     Dim wsSwap As Worksheet
     Dim slotCols As Variant
@@ -12,7 +11,7 @@ Sub SwapStaff()
     Dim newName As String
     Dim dateCell As Range
     
-    InitializeWorksheets wsRoster, wsPersonnel, wsSwap
+    InitializeWorksheets wsPersonnel, wsSwap
     GetSwapNames wsSwap, oriName, newName
     ValidateNames oriName, newName
     
@@ -20,31 +19,32 @@ Sub SwapStaff()
     If dateRange Is Nothing Then Exit Sub
     If Not IsValidDateColumn(dateRange) Then Exit Sub
     
-    slotCols = Array(6, 8, 10, 12, 14)
+    slotCols = Array(LMB_COL, MOR_COL, AFT_COL, AOH_COL, SAT_AOH_COL1, SAT_AOH_COL2)
     Dim r As Long
     For Each dateCell In dateRange
-        r = dateCell.Row
+        r = dateCell.row
         Dim oriNameFound As Boolean
         CheckOriginalNameExists wsRoster, r, slotCols, oriName, oriNameFound
         If Not oriNameFound Then
-            DisplayError "Error: " & oriName & " not found in row " & r & ". Swap not allowed.", vbExclamation
+            DisplayError "Error: " & oriName & " not found on date " & wsRoster.Cells(r, DATE_COL).Value & ". Swap not allowed.", vbExclamation
         Else
             Dim nameExists As Boolean
             CheckNewNameExists wsRoster, r, slotCols, newName, nameExists
             If nameExists Then
-                DisplayError "Error: " & newName & " already exists in row " & r & ". Swap not allowed.", vbExclamation
+                DisplayError "Error: " & newName & " already exists on date " & wsRoster.Cells(r, DATE_COL).Value & ". Swap not allowed.", vbExclamation
             Else
                 PerformSwap wsRoster, r, slotCols, oriName, newName, wsPersonnel
             End If
         End If
     Next dateCell
     
+    wsRoster.Activate
     MsgBox "Swap completed.", vbInformation
 End Sub
 
 ' Initialize worksheet references
-Private Sub InitializeWorksheets(wsRoster As Worksheet, wsPersonnel As Worksheet, wsSwap As Worksheet)
-    Set wsRoster = Sheets("MasterCopy")
+Private Sub InitializeWorksheets(wsPersonnel As Worksheet, wsSwap As Worksheet)
+    Set wsRoster = Sheets("Roster")
     Set wsPersonnel = Sheets("PersonnelList (AOH & Desk)")
     Set wsSwap = Sheets("Swap")
 End Sub
@@ -70,13 +70,13 @@ End Sub
 ' Prompt user to select date range and return it
 Private Function GetDateRange() As Range
     On Error Resume Next
-    Set GetDateRange = Application.InputBox("Select date cells (Column A)", Type:=8)
+    Set GetDateRange = Application.InputBox("Select date cells (Column B)", Type:=8)
     On Error GoTo 0
 End Function
 
 ' Validate that the selected range is from column A (column 1)
 Private Function IsValidDateColumn(dateRange As Range) As Boolean
-    If Not dateRange.Columns(1).Column = 2 Then
+    If Not dateRange.Columns.Count = 1 Or dateRange.Column <> 2 Then
         MsgBox "Please only select dates from Date column.", vbExclamation
         IsValidDateColumn = False
     Else
@@ -89,19 +89,23 @@ Private Sub CheckOriginalNameExists(wsRoster As Worksheet, r As Long, slotCols A
     Dim col As Variant
     Dim cellValue As String
     Dim lines() As String
+    Dim currStaff As String
     oriNameFound = False
     For Each col In slotCols
         cellValue = wsRoster.Cells(r, col).Value
         If InStr(cellValue, vbNewLine) > 0 Then
-            If UCase(Trim(Split(cellValue, vbNewLine)(0))) = oriName Then
-                oriNameFound = True
-            End If
+            currStaff = UCase(Trim(Replace(Split(cellValue, vbNewLine)(0), Chr(160), " ")))
+            Debug.Print "--multiple value"
         Else
-            If UCase(Trim(cellValue)) = oriName Then
-                oriNameFound = True
-            End If
+            currStaff = UCase(Trim(cellValue))
         End If
-        If oriNameFound Then Exit For
+
+        Debug.Print "Checking slot " & col & ": " & currStaff & " vs " & oriName
+        
+        If currStaff = oriName Then
+            oriNameFound = True
+            Exit For
+        End If
     Next col
 End Sub
 
@@ -171,7 +175,7 @@ Private Sub PerformSwap(wsRoster As Worksheet, r As Long, slotCols As Variant, o
                 .RowHeight = .RowHeight + 15
                 
                 ' Update personnel counter for the new staff
-                lastRow = wsPersonnel.Cells(wsPersonnel.Rows.Count, "B").End(xlUp).Row
+                lastRow = wsPersonnel.Cells(wsPersonnel.Rows.Count, "B").End(xlUp).row
                 ' Deduct duties from the old staff
                 For i = 12 To lastRow
                     If UCase(Trim(wsPersonnel.Cells(i, 2).Value)) = oriName Then
@@ -196,3 +200,6 @@ Private Sub PerformSwap(wsRoster As Worksheet, r As Long, slotCols As Variant, o
         End With
     Next slotCol
 End Sub
+
+
+
